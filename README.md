@@ -42,7 +42,6 @@
 В корне проекта в терминале выполнить команду: docker-compose up -d --build  
 Доступ к сервисам:  
 http://localhost:8085 — Api Gateway. (для генераторов)  
-http://localhost:8085/swagger-ui/index.html — Документация Swagger.  
 http://localhost:8091 — Сервис генератор 1.  
 http://localhost:8092 — Сервис генератор 2.  
 http://localhost:8093 — Сервис генератор 3.  

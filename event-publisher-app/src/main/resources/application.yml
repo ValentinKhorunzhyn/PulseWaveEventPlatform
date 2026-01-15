@@ -1,0 +1,104 @@
+spring:
+  application:
+    name: publisher-service
+
+  security:
+    user:
+      name: user
+      password: password
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/publisher_db}
+    username: ${DATABASE_USER:user}
+    password: ${DATABASE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      pool-name: PublisherHikariPool
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    schemas: publisher
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:publisher-group}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      fetch-max-wait: 500
+      fetch-min-size: 1
+      max-poll-records: 100
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      compression-type: snappy
+      retries: 3
+
+server:
+  port: ${SERVER_PORT:8090}
+  servlet:
+    context-path: /
+  tomcat:
+    max-connections: 10000
+    threads:
+      max: 200
+      min-spare: 10
+
+publisher:
+  id: ${PUBLISHER_ID:publisher-default}
+  name: ${PUBLISHER_NAME:Event Publisher}
+  instance:
+    id: ${INSTANCE_ID:1}
+  interval:
+    ms: ${PUBLISHER_INTERVAL_MS:5000}
+  initial-delay:
+    ms: ${PUBLISHER_INITIAL_DELAY_MS:10000}
+
+kafka:
+  topics:
+    events: ${KAFKA_EVENTS_TOPIC:events.topic}
+    confirmations: ${KAFKA_CONFIRMATIONS_TOPIC:confirmations.topic}
+    dlq: ${KAFKA_DEAD_LETTER_TOPIC:dead-letter.topic}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    com.khorunzhyn.publisher: DEBUG
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+springdoc:
+  swagger-ui:
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true

@@ -1,0 +1,109 @@
+spring:
+  application:
+    name: registration-service
+
+  security:
+    user:
+      name: user
+      password: password
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/registar_db}
+    username: ${DATABASE_USER:user}
+    password: ${DATABASE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 15
+      pool-name: RegistarHikariPool
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 50
+    show-sql: false
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    schemas: registar
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:registration-group}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      fetch-max-wait: 500
+      fetch-min-size: 1
+      max-poll-records: 100
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      compression-type: snappy
+      retries: 3
+
+server:
+  port: ${SERVER_PORT:8091}
+  servlet:
+    context-path: /
+  tomcat:
+    max-connections: 10000
+    threads:
+      max: 200
+      min-spare: 10
+
+kafka:
+  topics:
+    events: ${KAFKA_EVENTS_TOPIC:events.topic}
+    confirmations: ${KAFKA_CONFIRMATIONS_TOPIC:confirmations.topic}
+    dlq: ${KAFKA_DLQ_TOPIC:dead-letter.topic}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+registration:
+  processing:
+    stale-event-minutes: 5
+    max-retry-attempts: 3
+    cleanup-days: 30
+  metrics:
+    cache-ttl-seconds: 30
+
+logging:
+  level:
+    com.khorunzhyn.registar: ${LOGGING_LEVEL_REGISTRATION:INFO}
+    org.springframework.kafka: ${LOGGING_LEVEL_KAFKA:WARN}
+    org.hibernate.SQL: ${LOGGING_LEVEL_HIBERNATE_SQL:WARN}
+    org.hibernate.type.descriptor.sql: ${LOGGING_LEVEL_HIBERNATE_TYPE:WARN}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+springdoc:
+  swagger-ui:
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true

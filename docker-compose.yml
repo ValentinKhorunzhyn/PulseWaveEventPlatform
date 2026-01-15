@@ -1,0 +1,231 @@
+version: '3.8'
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  publisher-db:
+    image: postgres:16
+    container_name: publisher-db
+    networks:
+      - app-network
+    environment:
+      POSTGRES_DB: publisher_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - publisher-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d publisher_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  registar-db:
+    image: postgres:16
+    container_name: registar-db
+    networks:
+      - app-network
+    environment:
+      POSTGRES_DB: registar_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - registar-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d registar_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  publisher-1:
+    build:
+      context: .
+      dockerfile: event-publisher-app/Dockerfile
+    container_name: publisher-app-1
+    networks:
+      - app-network
+    depends_on:
+      publisher-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      # Database
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
+      # Publisher instance
+      PUBLISHER_ID: 1
+      PUBLISHER_NAME: "Event Publisher"
+      PUBLISHER_INTERVAL_MS: "5000"
+      # Java
+      JAVA_OPTS: "-Xmx1024m -Xms512m"
+    ports:
+      - "8091:8090"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  publisher-2:
+    build:
+      context: .
+      dockerfile: event-publisher-app/Dockerfile
+    container_name: publisher-app-2
+    networks:
+      - app-network
+    depends_on:
+      publisher-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      # Database
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
+      # Publisher instance
+      PUBLISHER_ID: 2
+      PUBLISHER_NAME: "Event Publisher"
+      PUBLISHER_INTERVAL_MS: "5000"
+      # Java
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    ports:
+      - "8092:8090"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  publisher-3:
+    build:
+      context: .
+      dockerfile: event-publisher-app/Dockerfile
+    container_name: publisher-app-3
+    networks:
+      - app-network
+    depends_on:
+      publisher-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      # Database
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
+      # Publisher instance
+      PUBLISHER_ID: 3
+      PUBLISHER_NAME: "Event Publisher"
+      PUBLISHER_INTERVAL_MS: "5000"
+      # Java
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    ports:
+      - "8093:8090"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  registar:
+    build:
+      context: .
+      dockerfile: event-registar-app/Dockerfile
+    container_name: registar-app
+    networks:
+      - app-network
+    depends_on:
+      registar-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      # Database
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://registar-db:5432/registar_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
+      # Java
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    ports:
+      - "8094:8091"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8091/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    networks:
+      - app-network
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    networks:
+      - app-network
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092" # Port for external access
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # For listeners: INTERNAL - Docker, EXTERNAL - localhost
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9093,EXTERNAL://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 9093 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gateway:
+    image: nginx:alpine
+    container_name: api-gateway
+    networks:
+      - app-network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8085:80"
+    depends_on:
+      publisher-1:
+        condition: service_healthy
+      publisher-2:
+        condition: service_healthy
+      publisher-3:
+        condition: service_healthy
+
+volumes:
+  publisher-data:
+  registar-data:

@@ -3,11 +3,11 @@ package com.khorunzhyn.registar.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.khorunzhyn.registar.enums.EventType;
+import com.khorunzhyn.registar.model.PublisherMetadata;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
-import java.util.Map;
 
 public record EventMessageDto(
         @NotBlank
@@ -19,7 +19,7 @@ public record EventMessageDto(
         String publisherId,
 
         @JsonProperty("publisherMetadata")
-        Map<String, Object> publisherMetadata,
+        PublisherMetadata publisherMetadata,
 
         @NotNull
         @JsonProperty("eventType")

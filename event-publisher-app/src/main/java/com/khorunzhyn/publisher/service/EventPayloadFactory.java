@@ -1,230 +1,208 @@
 package com.khorunzhyn.publisher.service;
 
-
+import com.khorunzhyn.publisher.enums.BusinessEntityType;
+import com.khorunzhyn.publisher.enums.BusinessOperation;
 import com.khorunzhyn.publisher.enums.EventType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.khorunzhyn.publisher.model.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.ArrayList;
+import java.util.List;
 
+import static com.khorunzhyn.publisher.util.RandomDataUtils.*;
 
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class EventPayloadFactory {
-
-    private static final Logger log = LoggerFactory.getLogger(EventPayloadFactory.class);
 
     private final ObjectMapper objectMapper;
     private final PublisherIdentityService identityService;
 
-    public EventPayloadFactory(PublisherIdentityService identityService) {
-        this.identityService = identityService;
-        this.objectMapper = new ObjectMapper();
-    }
-
     public String createPayload(EventType eventType) {
-        Map<String, Object> payload = switch (eventType) {
-            case USER_ACTION -> createUserActionPayload();
-            case SYSTEM_ALERT -> createSystemAlertPayload();
-            case BUSINESS_EVENT -> createBusinessEventPayload();
+        AbstractEvent event = createEvent(eventType);
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (Exception e) {
+            log.error("Failed to serialize event", e);
+            return "{}";
+        }
+    }
+
+    public AbstractEvent createEvent(EventType eventType) {
+        var metadata = identityService.getMetadata();
+
+        return switch (eventType) {
+            case USER_ACTION -> createUserAction(metadata);
+            case SYSTEM_ALERT -> createSystemAlert(metadata);
+            case AUDIT_LOG -> createAuditLog(metadata);
+            case BUSINESS_EVENT -> createBusinessEvent(metadata);
         };
-
-        // Add common fields
-        payload.put("eventId", UUID.randomUUID().toString());
-        payload.put("eventType", eventType.name());
-        payload.put("timestamp", Instant.now().toString());
-        payload.put("schemaVersion", "1.0");
-        payload.put("publisher", identityService.getMetadata());
-
-        return objectMapper.writeValueAsString(payload);
     }
 
-    private Map<String, Object> createUserActionPayload() {
-        Map<String, Object> payload = new LinkedHashMap<>();
+    private UserActionEvent createUserAction(PublisherMetadata metadata) {
+        String action = randomItem(USER_ACTIONS);
 
-        // Actor
-        Map<String, Object> actor = Map.of(
-                "id", "user-" + (1000 + ThreadLocalRandom.current().nextInt(9000)),
-                "type", randomElement("CUSTOMER", "ADMIN", "SUPPORT", "API_CLIENT"),
-                "username", "user" + ThreadLocalRandom.current().nextInt(1000) + "@example.com",
-                "roles", List.of(randomElement("USER", "VIEWER", "EDITOR", "ADMIN"))
-        );
-        payload.put("actor", actor);
-
-        // Action
-        String action = randomElement(
-                "LOGIN", "LOGOUT", "VIEW_PAGE", "CREATE_RESOURCE",
-                "UPDATE_RESOURCE", "DELETE_RESOURCE", "DOWNLOAD_FILE"
-        );
-        payload.put("action", action);
-
-        // Target
-        Map<String, Object> target = Map.of(
-                "type", randomElement("WEB_PAGE", "API_ENDPOINT", "FILE", "DATABASE_RECORD"),
-                "id", "target-" + ThreadLocalRandom.current().nextInt(10000),
-                "name", "/api/v1/" + action.toLowerCase().replace('_', '-')
-        );
-        payload.put("target", target);
-
-        // Details
-        Map<String, Object> details = Map.of(
-                "success", ThreadLocalRandom.current().nextBoolean(),
-                "durationMs", 50 + ThreadLocalRandom.current().nextInt(2000),
-                "ipAddress", generateIpAddress(),
-                "userAgent", randomUserAgent(),
-                "sessionId", UUID.randomUUID().toString(),
-                "location", randomElement("US", "EU", "ASIA", "UNKNOWN")
-        );
-        payload.put("details", details);
-
-        return payload;
+        return UserActionEvent.builder()
+                .assignDefaults(metadata)
+                .eventType(EventType.USER_ACTION)
+                .actor(UserActionEvent.Actor.builder()
+                        .id(randomId("user-", 1000, 9999))
+                        .type(randomItem(ACTOR_TYPES))
+                        .username(randomId("user", 1, 1000) + "@example.com")
+                        .roles(List.of(randomItem(USER_ROLES)))
+                        .build())
+                .action(action)
+                .target(UserActionEvent.Target.builder()
+                        .type(randomItem(TARGET_TYPES))
+                        .id(randomId("target-", 1, 10000))
+                        .name("/api/v1/" + action.toLowerCase().replace('_', '-'))
+                        .build())
+                .details(UserActionEvent.ActionDetails.builder()
+                        .success(randomBoolean())
+                        .durationMs(randomInt(50, 2050))
+                        .ipAddress(generateIpAddress())
+                        .userAgent(randomItem(USER_AGENTS))
+                        .sessionId(randomUuid())
+                        .location(randomItem(LOCATIONS))
+                        .build())
+                .build();
     }
 
-    private Map<String, Object> createSystemAlertPayload() {
-        Map<String, Object> payload = new LinkedHashMap<>();
+    private SystemAlertEvent createSystemAlert(PublisherMetadata metadata) {
+        String component = randomItem(SYSTEM_COMPONENTS);
+        String alertType = randomItem(ALERT_TYPES);
 
-        // System component
-        String component = randomElement("DATABASE", "API_GATEWAY", "CACHE", "QUEUE", "STORAGE");
-        payload.put("component", component);
+        double cpu = round(randomDouble(70, 100), 1);
+        String severity = cpu > 90 ? "CRITICAL" : cpu > 80 ? "HIGH" : cpu > 70 ? "MEDIUM" : "LOW";
 
-        // Alert details
-        String alertType = randomElement(
-                "HIGH_CPU", "MEMORY_LEAK", "DISK_FULL", "HIGH_LATENCY",
-                "ERROR_RATE_SPIKE", "CONNECTION_POOL_EXHAUSTED"
-        );
-        payload.put("alertType", alertType);
-
-        // Metrics
-        Map<String, Object> metrics = Map.of(
-                "cpuUsage", round(70 + ThreadLocalRandom.current().nextDouble() * 30, 1),
-                "memoryUsage", round(60 + ThreadLocalRandom.current().nextDouble() * 40, 1),
-                "diskUsage", round(50 + ThreadLocalRandom.current().nextDouble() * 50, 1),
-                "responseTimeP95", 100 + ThreadLocalRandom.current().nextInt(900),
-                "errorRate", round(ThreadLocalRandom.current().nextDouble() * 5, 2),
-                "activeConnections", 10 + ThreadLocalRandom.current().nextInt(100)
-        );
-        payload.put("metrics", metrics);
-
-        // Severity
-        double cpu = (Double) metrics.get("cpuUsage");
-        String severity = cpu > 90 ? "CRITICAL" :
-                cpu > 80 ? "HIGH" :
-                        cpu > 70 ? "MEDIUM" : "LOW";
-        payload.put("severity", severity);
-
-        // Context
-        payload.put("message", String.format("%s detected in %s. CPU usage: %.1f%%",
-                alertType.replace('_', ' '), component, cpu));
-        payload.put("recommendation", randomElement(
-                "Scale up instance", "Restart service", "Check dependencies",
-                "Review configuration", "Increase disk space"
-        ));
-        payload.put("threshold", 80.0);
-
-        return payload;
+        return SystemAlertEvent.builder()
+                .assignDefaults(metadata)
+                .eventType(EventType.SYSTEM_ALERT)
+                .component(component)
+                .alertType(alertType)
+                .metrics(SystemAlertEvent.SystemMetrics.builder()
+                        .cpuUsage(cpu)
+                        .memoryUsage(round(randomDouble(60, 100), 1))
+                        .diskUsage(round(randomDouble(50, 100), 1))
+                        .responseTimeP95(randomInt(100, 1000))
+                        .errorRate(round(randomDouble(0, 5), 2))
+                        .activeConnections(randomInt(10, 110))
+                        .build())
+                .severity(severity)
+                .message(String.format("%s detected in %s. CPU usage: %.1f%%", alertType.replace('_', ' '), component, cpu))
+                .recommendation(randomItem(RECOMMENDATIONS))
+                .threshold(80.0)
+                .build();
     }
 
-    private Map<String, Object> createBusinessEventPayload() {
-        Map<String, Object> payload = new LinkedHashMap<>();
+    private AuditLogEvent createAuditLog(PublisherMetadata metadata) {
+        List<AuditLogEvent.Change> changes = new ArrayList<>();
+        int count = randomInt(1, 3);
 
-        // Business entity
-        String entity = randomElement("ORDER", "PAYMENT", "CUSTOMER");
-        payload.put("entity", entity);
-
-        // Operation
-        String operation = randomElement("CREATED", "UPDATED", "DELETED", "PROCESSED", "APPROVED");
-        payload.put("operation", operation);
-
-        // Business data
-        Map<String, Object> businessData = new HashMap<>();
-        businessData.put("id", entity.toLowerCase() + "_" + (10000 + ThreadLocalRandom.current().nextInt(90000)));
-        businessData.put("timestamp", Instant.now().minusSeconds(ThreadLocalRandom.current().nextInt(3600)).toString());
-
-        switch (entity) {
-            case "ORDER" -> {
-                businessData.put("customerId", "cust_" + (1000 + ThreadLocalRandom.current().nextInt(9000)));
-                businessData.put("amount", round(10 + ThreadLocalRandom.current().nextDouble() * 990, 2));
-                businessData.put("currency", randomElement("USD", "EUR", "GBP", "JPY"));
-                businessData.put("items", 1 + ThreadLocalRandom.current().nextInt(10));
-                businessData.put("status", randomElement("PENDING", "PROCESSING", "SHIPPED", "DELIVERED"));
-                businessData.put("shippingAddress", generateAddress());
-            }
-            case "PAYMENT" -> {
-                businessData.put("orderId", "order_" + (10000 + ThreadLocalRandom.current().nextInt(90000)));
-                businessData.put("amount", round(10 + ThreadLocalRandom.current().nextDouble() * 990, 2));
-                businessData.put("method", randomElement("CREDIT_CARD", "PAYPAL", "BANK_TRANSFER", "CRYPTO"));
-                businessData.put("successful", ThreadLocalRandom.current().nextBoolean());
-                businessData.put("transactionId", "txn_" + UUID.randomUUID().toString().substring(0, 8));
-            }
-            case "CUSTOMER" -> {
-                businessData.put("name", randomElement("John Smith", "Jane Doe", "Alex Johnson", "Maria Garcia"));
-                businessData.put("email", "customer" + ThreadLocalRandom.current().nextInt(1000) + "@example.com");
-                businessData.put("tier", randomElement("BASIC", "PREMIUM", "ENTERPRISE"));
-                businessData.put("lifetimeValue", round(ThreadLocalRandom.current().nextDouble() * 10000, 2));
-                businessData.put("signupDate", Instant.now().minus(Duration.ofDays(ThreadLocalRandom.current().nextInt(365))));
-            }
-        }
-        payload.put("businessData", businessData);
-
-        // Revenue impact
-        if (entity.equals("ORDER") || entity.equals("PAYMENT")) {
-            payload.put("revenueImpact", businessData.get("amount"));
+        for (int i = 0; i < count; i++) {
+            changes.add(AuditLogEvent.Change.builder()
+                    .field(randomItem(AUDIT_FIELDS))
+                    .oldValue(randomId("val_", 0, 100))
+                    .newValue(randomId("val_", 0, 100))
+                    .reason(randomItem(AUDIT_REASONS))
+                    .build());
         }
 
-        return payload;
+        return AuditLogEvent.builder()
+                .assignDefaults(metadata)
+                .eventType(EventType.AUDIT_LOG)
+                .action(randomItem(AUDIT_ACTIONS))
+                .entity(AuditLogEvent.AuditEntity.builder()
+                        .type(randomItem(AUDIT_ENTITY_TYPES))
+                        .id(randomId("ent-", 1000, 9999))
+                        .name(randomId("Entity ", 1, 1000))
+                        .build())
+                .changes(changes)
+                .complianceStandard(randomItem(COMPLIANCE_STANDARDS))
+                .requiresReview(randomBoolean())
+                .auditor(randomId("auditor-", 1, 100))
+                .build();
     }
 
-    private String createFallbackPayload(EventType eventType) {
-        return String.format("""
-                {
-                    "eventType": "%s",
-                    "timestamp": "%s",
-                    "message": "Fallback payload",
-                    "publisher": %s
-                }
-                """, eventType.name(), Instant.now(), identityService.getPublisherId());
+    private BusinessEvent<?> createBusinessEvent(PublisherMetadata metadata) {
+        var entityType = randomItem(BusinessEntityType.values());
+
+        return switch (entityType) {
+            case ORDER -> createOrderEvent(metadata);
+            case PAYMENT -> createPaymentEvent(metadata);
+            case CUSTOMER -> createCustomerEvent(metadata);
+        };
     }
 
-    private String generateIpAddress() {
-        return String.format("%d.%d.%d.%d",
-                ThreadLocalRandom.current().nextInt(256),
-                ThreadLocalRandom.current().nextInt(256),
-                ThreadLocalRandom.current().nextInt(256),
-                ThreadLocalRandom.current().nextInt(256)
-        );
+    private BusinessEvent<BusinessEvent.OrderPayload> createOrderEvent(PublisherMetadata metadata) {
+        double amountVal = round(randomDouble(10, 1000), 2);
+
+        var payload = BusinessEvent.OrderPayload.builder()
+                .orderId(randomId("ord-", 10000, 99999))
+                .customerId(randomId("cust-", 1000, 9999))
+                .amount(BigDecimal.valueOf(amountVal))
+                .currency(randomItem(CURRENCIES))
+                .itemsCount(randomInt(1, 10))
+                .status(randomItem(ORDER_STATUSES))
+                .shippingAddress("Address " + randomInt(1, 100))
+                .build();
+
+        return BusinessEvent.<BusinessEvent.OrderPayload>builder()
+                .assignDefaults(metadata)
+                .eventType(EventType.BUSINESS_EVENT)
+                .entityType(BusinessEntityType.ORDER)
+                .businessOperation(randomItem(BusinessOperation.CREATED, BusinessOperation.UPDATED))
+                .businessData(payload)
+                .revenueImpact(amountVal)
+                .build();
     }
 
-    private String generateAddress() {
-        return String.format("%d %s St, %s, %s %s",
-                ThreadLocalRandom.current().nextInt(1000),
-                randomElement("Main", "Oak", "Pine", "Maple", "Cedar"),
-                randomElement("New York", "London", "Tokyo", "Berlin", "Sydney"),
-                randomElement("NY", "CA", "TX", "FL", "IL"),
-                (10000 + ThreadLocalRandom.current().nextInt(90000))
-        );
+    private BusinessEvent<BusinessEvent.PaymentPayload> createPaymentEvent(PublisherMetadata metadata) {
+        double amountVal = round(randomDouble(10, 500), 2);
+        boolean success = randomInt(0, 10) > 1;
+
+        var payload = BusinessEvent.PaymentPayload.builder()
+                .paymentId(randomId("pay-", 10000, 99999))
+                .orderId(randomId("ord-", 10000, 99999))
+                .amount(BigDecimal.valueOf(amountVal))
+                .method(randomItem(PAYMENT_METHODS))
+                .successful(success)
+                .transactionId(randomUuid())
+                .build();
+
+        return BusinessEvent.<BusinessEvent.PaymentPayload>builder()
+                .assignDefaults(metadata)
+                .eventType(EventType.BUSINESS_EVENT)
+                .entityType(BusinessEntityType.PAYMENT)
+                .businessOperation(BusinessOperation.PROCESSED)
+                .businessData(payload)
+                .revenueImpact(success ? amountVal : 0.0)
+                .build();
     }
 
-    private String randomUserAgent() {
-        return randomElement(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15",
-                "PostmanRuntime/7.29.0"
-        );
-    }
+    private BusinessEvent<BusinessEvent.CustomerPayload> createCustomerEvent(PublisherMetadata metadata) {
+        var payload = BusinessEvent.CustomerPayload.builder()
+                .customerId(randomId("cust-", 1000, 9999))
+                .fullName(randomItem(CUSTOMER_NAMES))
+                .email("user" + randomInt(1, 1000) + "@test.com")
+                .tier(randomItem(CUSTOMER_TIERS))
+                .signupDate(Instant.now().minus(Duration.ofDays(randomInt(0, 365))))
+                .build();
 
-    @SafeVarargs
-    private <T> T randomElement(T... elements) {
-        return elements[ThreadLocalRandom.current().nextInt(elements.length)];
-    }
-
-    private double round(double value, int places) {
-        double scale = Math.pow(10, places);
-        return Math.round(value * scale) / scale;
+        return BusinessEvent.<BusinessEvent.CustomerPayload>builder()
+                .assignDefaults(metadata)
+                .eventType(EventType.BUSINESS_EVENT)
+                .entityType(BusinessEntityType.CUSTOMER)
+                .businessOperation(randomItem(BusinessOperation.UPDATED, BusinessOperation.DELETED))
+                .businessData(payload)
+                .revenueImpact(null)
+                .build();
     }
 }

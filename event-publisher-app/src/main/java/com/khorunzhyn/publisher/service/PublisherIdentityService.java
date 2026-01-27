@@ -1,5 +1,6 @@
 package com.khorunzhyn.publisher.service;
 
+import com.khorunzhyn.publisher.model.PublisherMetadata;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,8 +11,6 @@ import org.springframework.stereotype.Component;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Slf4j
 @Getter
@@ -19,12 +18,10 @@ import java.util.Map;
 @Component
 public class PublisherIdentityService {
 
+    private final PublisherMetadata metadata;
     private final String publisherId;
-    private final Map<String, Object> metadata;
     private final String publisherName;
     private final String instanceId;
-    private final String hostname;
-    private final String containerId;
 
     public PublisherIdentityService(
             @Value("${publisher.id:}") String configuredId,
@@ -33,8 +30,6 @@ public class PublisherIdentityService {
 
         this.publisherName = publisherName;
         this.instanceId = instanceId;
-        this.hostname = getHostname();
-        this.containerId = getContainerId();
         this.publisherId = resolvePublisherId(configuredId);
         this.metadata = buildMetadata();
     }
@@ -42,11 +37,8 @@ public class PublisherIdentityService {
     @PostConstruct
     public void init() {
         log.info("=== Publisher Identity Initialized ===");
-        log.info("ID: {}", publisherId);
-        log.info("Name: {}", publisherName);
-        log.info("Instance: {}", instanceId);
-        log.info("Host: {}", hostname);
-        log.info("Container: {}", containerId);
+        log.info("ID: {}", metadata.getId());
+        log.info("Host: {}", metadata.getHostname());
         log.info("====================================");
     }
 
@@ -54,16 +46,16 @@ public class PublisherIdentityService {
         return String.format("%s-%s", publisherName.toLowerCase().replace(" ", "-"), configuredId);
     }
 
-    private Map<String, Object> buildMetadata() {
-        Map<String, String> meta = new LinkedHashMap<>();
-        meta.put("id", publisherId);
-        meta.put("name", publisherName);
-        meta.put("instance", instanceId);
-        meta.put("hostname", hostname);
-        meta.put("containerId", containerId);
-        meta.put("startTime", Instant.now().toString());
-        meta.put("javaVersion", System.getProperty("java.version"));
-        return Map.copyOf(meta);
+    private PublisherMetadata buildMetadata() {
+        return PublisherMetadata.builder()
+                .id(publisherId)
+                .name(publisherName)
+                .instanceId(instanceId)
+                .hostname(getHostname())
+                .containerId(getContainerId())
+                .javaVersion(System.getProperty("java.version"))
+                .startTime(Instant.now().toString())
+                .build();
     }
 
     private String getHostname() {
@@ -84,11 +76,5 @@ public class PublisherIdentityService {
         } catch (Exception e) {
             return "error";
         }
-    }
-
-    public Map<String, Object> getMetadataForEvent() {
-        Map<String, Object> eventMeta = new LinkedHashMap<>(metadata);
-        eventMeta.put("eventTime", Instant.now().toString());
-        return Map.copyOf(eventMeta);
     }
 }

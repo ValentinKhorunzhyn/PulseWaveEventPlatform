@@ -12,8 +12,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 @Getter
@@ -44,10 +42,9 @@ public class RegisteredEvent {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String payload;
 
-    @Builder.Default
     @Column(columnDefinition = "JSONB")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> publisherMetadata = new HashMap<>();
+    private PublisherMetadata publisherMetadata;
 
     @Column(nullable = false)
     private Instant originalCreatedAt; // When event was created at generator

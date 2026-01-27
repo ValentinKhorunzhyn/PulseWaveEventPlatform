@@ -25,21 +25,13 @@ public class EventMapper {
     public RegisteredEvent toEntity(EventMessageDto message) {
         try {
             JsonNode payloadNode = objectMapper.readTree(message.payload());
-            Map<String, Object> publisherMetadata = Map.of();
-            if (message.publisherMetadata() != null) {
-                publisherMetadata = objectMapper.convertValue(
-                        message.publisherMetadata(),
-                        new TypeReference<Map<String, Object>>() {
-                        }
-                );
-            }
 
             return RegisteredEvent.builder()
                     .eventId(message.eventId())
                     .sourcePublisherId(message.publisherId())
                     .eventType(message.eventType())
                     .payload(payloadNode.toString())
-                    .publisherMetadata(publisherMetadata)
+                    .publisherMetadata(message.publisherMetadata())
                     .originalCreatedAt(message.createdAt())
                     .receivedAt(Instant.now())
                     .processingStatus(EventStatus.RECEIVED)
@@ -57,11 +49,6 @@ public class EventMapper {
                     event.getPayload(),
                     new TypeReference<Map<String, Object>>() {
                     });
-            Map<String, String> metadataMap = event.getPublisherMetadata() != null ?
-                    objectMapper.convertValue(event.getPublisherMetadata(),
-                            new TypeReference<Map<String, String>>() {
-                            }) :
-                    Map.of();
 
             return EventResponseDto.builder()
                     .id(event.getId())
@@ -69,7 +56,7 @@ public class EventMapper {
                     .sourcePublisherId(event.getSourcePublisherId())
                     .eventType(event.getEventType())
                     .payload(payloadMap)
-                    .publisherMetadata(metadataMap)
+                    .publisherMetadata(event.getPublisherMetadata())
                     .eventStatus(event.getProcessingStatus())
                     .originalCreatedAt(event.getOriginalCreatedAt())
                     .receivedAt(event.getReceivedAt())

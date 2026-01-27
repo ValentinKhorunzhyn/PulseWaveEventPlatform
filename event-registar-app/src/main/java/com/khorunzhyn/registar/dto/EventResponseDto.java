@@ -3,6 +3,7 @@ package com.khorunzhyn.registar.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.khorunzhyn.registar.enums.EventStatus;
 import com.khorunzhyn.registar.enums.EventType;
+import com.khorunzhyn.registar.model.PublisherMetadata;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,38 +23,38 @@ import java.util.UUID;
 public class EventResponseDto {
 
     @Schema(description = "Registration service event ID")
-    UUID id;
+    private UUID id;
 
     @Schema(description = "Original event ID from publisher")
-    String eventId;
+    private String eventId;
 
     @Schema(description = "Source publisher ID")
-    String sourcePublisherId;
+    private String sourcePublisherId;
 
     @Schema(description = "Event type")
-    EventType eventType;
+    private EventType eventType;
 
     @Schema(description = "Event payload (JSON)")
-    Map<String, Object> payload;
+    private Map<String, Object> payload;
 
     @Schema(description = "Publisher metadata")
-    Map<String, String> publisherMetadata;
+    private PublisherMetadata publisherMetadata;
 
     @Schema(description = "Processing status")
-    EventStatus eventStatus;
+    private EventStatus eventStatus;
 
     @Schema(description = "When event was created by publisher")
-    Instant originalCreatedAt;
+    private Instant originalCreatedAt;
 
     @Schema(description = "When event was received")
-    Instant receivedAt;
+    private Instant receivedAt;
 
     @Schema(description = "When event was processed")
-    Instant processedAt;
+    private Instant processedAt;
 
     @Schema(description = "Error message if processing failed")
-    String errorMessage;
+    private String errorMessage;
 
     @Schema(description = "Confirmation ID sent back to publisher")
-    String confirmationId;
+    private String confirmationId;
 }

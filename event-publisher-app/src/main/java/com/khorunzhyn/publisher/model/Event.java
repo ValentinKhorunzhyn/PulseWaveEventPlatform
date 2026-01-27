@@ -14,7 +14,6 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.Map;
 
 @Getter
 @Setter
@@ -45,7 +44,7 @@ public class Event {
 
     @Column(columnDefinition = "JSONB")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> publisherMetadata; // JSON with metadata
+    private PublisherMetadata publisherMetadata; // JSON with metadata
 
     @CreationTimestamp
     private Instant createdAt;

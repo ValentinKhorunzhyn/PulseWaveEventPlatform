@@ -68,14 +68,15 @@ services:
       PUBLISHER_NAME: "Event Publisher"
       PUBLISHER_INTERVAL_MS: "5000"
       # Java
-      JAVA_OPTS: "-Xmx1024m -Xms512m"
+      JAVA_OPTS: "-Xmx1024m -Xms256m"
     ports:
       - "8091:8090"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 40s
     restart: unless-stopped
 
   publisher-2:
@@ -110,7 +111,8 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 40s
     restart: unless-stopped
 
   publisher-3:
@@ -145,7 +147,8 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 40s
     restart: unless-stopped
 
   registar:
@@ -176,7 +179,8 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:8091/actuator/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 40s
     restart: unless-stopped
 
   zookeeper:
@@ -214,6 +218,7 @@ services:
     container_name: api-gateway
     networks:
       - app-network
+    restart: unless-stopped
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:

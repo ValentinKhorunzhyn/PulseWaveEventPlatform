@@ -21,10 +21,10 @@ public interface RegisteredEventRepository extends JpaRepository<RegisteredEvent
     @Query("""
                 SELECT 
                     COUNT(e) as totalEvents,
-                    SUM(CASE WHEN e.processingStatus = 'PROCESSED' THEN 1 ELSE 0 END) as processedEvents,
-                    SUM(CASE WHEN e.processingStatus = 'CONFIRMED' THEN 1 ELSE 0 END) as confirmedEvents,
-                    SUM(CASE WHEN e.processingStatus = 'FAILED' THEN 1 ELSE 0 END) as failedEvents,
-                    SUM(CASE WHEN e.processingStatus = 'DUPLICATE' THEN 1 ELSE 0 END) as duplicateEvents
+                    COALESCE(SUM(CASE WHEN e.processingStatus = 'PROCESSED' THEN 1 ELSE 0 END), 0) as processedEvents,
+                    COALESCE(SUM(CASE WHEN e.processingStatus = 'CONFIRMED' THEN 1 ELSE 0 END), 0) as confirmedEvents,
+                    COALESCE(SUM(CASE WHEN e.processingStatus = 'FAILED' THEN 1 ELSE 0 END), 0) as failedEvents,
+                    COALESCE(SUM(CASE WHEN e.processingStatus = 'DUPLICATE' THEN 1 ELSE 0 END), 0) as duplicateEvents
                 FROM RegisteredEvent e
             """)
     EventStatisticProjection getStatistics();

@@ -3,14 +3,14 @@ package com.khorunzhyn.publisher.dto;
 import ch.qos.logback.core.util.StringUtil;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.khorunzhyn.publisher.enums.EventType;
+import com.khorunzhyn.publisher.model.PublisherMetadata;
 
 import java.time.Instant;
-import java.util.Map;
 
 public record EventMessageDto(
         String eventId,
         String publisherId,
-        Map<String, Object> publisherMetadata,
+        PublisherMetadata publisherMetadata,
         EventType eventType,
         String payload,
 

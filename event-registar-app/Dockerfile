@@ -13,6 +13,8 @@ RUN ./mvnw package -DskipTests
 # Run stage
 FROM eclipse-temurin:21.0.2_13-jdk-jammy
 WORKDIR /app
+# Update packages and install curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Copy JAR from folder target/ that exists in builder container
 COPY --from=builder /app/event-registar-app/target/event-registar-app-*.jar event-registar-application.jar
-ENTRYPOINT ["java", "-jar", "event-registar-application.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar event-registar-application.jar"]

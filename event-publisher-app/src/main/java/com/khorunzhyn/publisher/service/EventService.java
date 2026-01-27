@@ -39,7 +39,7 @@ public class EventService {
                 .payload(payload)
                 .status(EventStatus.CREATED)
                 .publisherId(identityService.getPublisherId())
-                .publisherMetadata(identityService.getMetadataForEvent())
+                .publisherMetadata(identityService.getMetadata())
                 .build();
 
         Event savedEvent = eventRepository.save(event);

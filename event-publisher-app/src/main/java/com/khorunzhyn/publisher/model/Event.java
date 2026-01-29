@@ -6,7 +6,6 @@ import com.khorunzhyn.publisher.enums.EventType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
@@ -46,7 +45,6 @@ public class Event {
     @JdbcTypeCode(SqlTypes.JSON)
     private PublisherMetadata publisherMetadata; // JSON with metadata
 
-    @CreationTimestamp
     private Instant createdAt;
 
     private Instant confirmedAt;

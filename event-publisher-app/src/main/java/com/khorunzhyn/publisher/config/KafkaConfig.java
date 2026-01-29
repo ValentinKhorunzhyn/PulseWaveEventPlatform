@@ -50,40 +50,66 @@ public class KafkaConfig {
         return new KafkaTemplate<>(producerFactory());
     }
 
+    //Bean for ConfirmationMessageDto
+
     @Bean
-    public ConsumerFactory<String, ConfirmationMessageDto> consumerFactory(JsonMapper jsonMapper) {
+    public ConsumerFactory<String, ConfirmationMessageDto> confirmationConsumerFactory(JsonMapper jsonMapper) {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-        config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
 
         JacksonJsonDeserializer<ConfirmationMessageDto> jsonDeserializer =
                 new JacksonJsonDeserializer<>(ConfirmationMessageDto.class, jsonMapper);
         jsonDeserializer.setUseTypeHeaders(false);
         jsonDeserializer.addTrustedPackages("*");
 
-        ErrorHandlingDeserializer<ConfirmationMessageDto> errorDeserializer =
-                new ErrorHandlingDeserializer<>(jsonDeserializer);
+        return new DefaultKafkaConsumerFactory<>(
+                config,
+                new StringDeserializer(),
+                new ErrorHandlingDeserializer<>(jsonDeserializer)
+        );
+    }
+
+    @Bean("confirmationContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, ConfirmationMessageDto> confirmationContainerFactory(
+            ConsumerFactory<String, ConfirmationMessageDto> confirmationConsumerFactory) {
+
+        ConcurrentKafkaListenerContainerFactory<String, ConfirmationMessageDto> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(confirmationConsumerFactory);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        factory.setConcurrency(3);
+        return factory;
+    }
+
+    //Bean for String
+
+    @Bean
+    public ConsumerFactory<String, String> stringConsumerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
         return new DefaultKafkaConsumerFactory<>(
                 config,
                 new StringDeserializer(),
-                errorDeserializer
+                new ErrorHandlingDeserializer<>(new StringDeserializer()) // String десериализатор
         );
     }
 
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, ConfirmationMessageDto> kafkaListenerContainerFactory(
-            ConsumerFactory<String, ConfirmationMessageDto> consumerFactory
-    ) {
-        ConcurrentKafkaListenerContainerFactory<String, ConfirmationMessageDto> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory);
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
-        factory.setConcurrency(3);
+    @Bean("stringContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, String> stringContainerFactory(
+            ConsumerFactory<String, String> stringConsumerFactory) {
 
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(stringConsumerFactory);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE); // Или BATCH
+        factory.setConcurrency(1);
         return factory;
     }
 

@@ -15,7 +15,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.khorunzhyn.publisher.util.RandomDataUtils.*;
+import static com.khorunzhyn.publisher.util.PublisherDataUtils.*;
 
 @Slf4j
 @Component

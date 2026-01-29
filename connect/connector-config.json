@@ -1,0 +1,34 @@
+{
+  "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+  "tasks.max": "1",
+
+  "database.hostname": "publisher-db",
+  "database.port": "5432",
+  "database.user": "user",
+  "database.password": "password",
+  "database.dbname": "publisher_db",
+
+  "topic.prefix": "pulsewave",
+  "table.include.list": "public.outbox_events",
+  "plugin.name": "pgoutput",
+  "slot.name": "outbox_slot",
+  "publication.autocreate.mode": "filtered",
+
+  "transforms": "unwrap,extract,reroute",
+
+  "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+  "transforms.unwrap.drop.tombstones": "false",
+  "transforms.unwrap.delete.handling.mode": "rewrite",
+
+  "transforms.extract.type": "org.apache.kafka.connect.transforms.ExtractField$Value",
+  "transforms.extract.field": "payload",
+
+  "transforms.reroute.type": "org.apache.kafka.connect.transforms.RegexRouter",
+  "transforms.reroute.regex": ".*",
+  "transforms.reroute.replacement": "events.topic",
+
+  "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "key.converter.schemas.enable": "false",
+  "value.converter.schemas.enable": "false"
+}

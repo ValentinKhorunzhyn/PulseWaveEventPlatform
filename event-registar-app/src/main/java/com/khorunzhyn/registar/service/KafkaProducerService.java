@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 public class KafkaProducerService {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     private static final String CONFIRMATIONS_TOPIC = "confirmations.topic";
 
@@ -28,7 +30,9 @@ public class KafkaProducerService {
                 Instant.now()
         );
 
-        sendMessage(CONFIRMATIONS_TOPIC, event.getEventId(), message);
+        String confirmationJson = objectMapper.writeValueAsString(message);
+
+        sendMessage(CONFIRMATIONS_TOPIC, event.getEventId(), confirmationJson);
     }
 
     private void sendMessage(String topic, String key, Object message) {

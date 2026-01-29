@@ -23,6 +23,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    command: ["postgres", "-c", "wal_level=logical"]
 
   registar-db:
     image: postgres:16
@@ -212,6 +213,47 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  connect:
+    image: debezium/connect:2.5
+    container_name: kafka-connect
+    networks:
+      - app-network
+    ports:
+      - "8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9093
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      publisher-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  connect-init:
+    image: curlimages/curl
+    container_name: kafka-connect-init
+    networks:
+      - app-network
+    depends_on:
+      connect:
+        condition: service_healthy
+    volumes:
+      - ./connect/init.sh:/etc/kafka-connect/init.sh
+      - ./connect/connector-config.json:/etc/kafka-connect/connector-config.json
+    entrypoint: [ "/bin/sh", "/etc/kafka-connect/init.sh" ]
 
   gateway:
     image: nginx:alpine

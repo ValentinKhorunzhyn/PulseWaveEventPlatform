@@ -66,14 +66,10 @@ public class EventRegistrationService {
         validatePayload(event.getPayload());
         // Process business logic
         event.markAsProcessed();
-
         // Send confirmation
         String confirmationId = UUID.randomUUID().toString();
-
         event.markAsConfirmed(confirmationId);
         eventRepository.save(event);
-
-        kafkaProducerService.sendConfirmation(event, confirmationId);
 
         log.info("Event {} processed and confirmed. Confirmation ID: {}",
                 event.getEventId(), confirmationId);

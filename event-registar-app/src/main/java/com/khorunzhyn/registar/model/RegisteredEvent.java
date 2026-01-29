@@ -75,6 +75,9 @@ public class RegisteredEvent {
     @LastModifiedDate
     private Instant updatedAt;
 
+    @Column
+    private Instant confirmationSentAt;
+
     public boolean isProcessed() {
         return processingStatus == EventStatus.PROCESSED
                 || processingStatus == EventStatus.CONFIRMED;

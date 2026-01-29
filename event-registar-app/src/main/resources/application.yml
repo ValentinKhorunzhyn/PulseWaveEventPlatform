@@ -107,3 +107,7 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
     display-request-duration: true
+
+registar:
+  confirmation:
+    interval: 5000

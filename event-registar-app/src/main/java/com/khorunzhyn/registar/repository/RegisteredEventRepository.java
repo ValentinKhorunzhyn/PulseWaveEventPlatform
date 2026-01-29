@@ -1,13 +1,16 @@
 package com.khorunzhyn.registar.repository;
 
 
+import com.khorunzhyn.registar.enums.EventStatus;
 import com.khorunzhyn.registar.model.RegisteredEvent;
 import com.khorunzhyn.registar.repository.projection.EventStatisticProjection;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +20,8 @@ public interface RegisteredEventRepository extends JpaRepository<RegisteredEvent
     Optional<RegisteredEvent> findByEventId(String eventId);
 
     long countByReceivedAtBetween(Instant start, Instant end);
+
+    List<RegisteredEvent> findByProcessingStatusAndConfirmationSentAtIsNull(EventStatus status, Pageable pageable);
 
     @Query("""
                 SELECT 

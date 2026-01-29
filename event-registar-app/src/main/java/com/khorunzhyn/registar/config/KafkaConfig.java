@@ -1,6 +1,5 @@
 package com.khorunzhyn.registar.config;
 
-import com.khorunzhyn.registar.dto.EventMessageDto;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -13,9 +12,6 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
-import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
-import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +31,7 @@ public class KafkaConfig {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
         config.put(ProducerConfig.RETRIES_CONFIG, 3);
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
@@ -49,7 +45,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, EventMessageDto> consumerFactory(JsonMapper jsonMapper) {
+    public ConsumerFactory<String, String> consumerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
@@ -57,13 +53,8 @@ public class KafkaConfig {
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
 
-        JacksonJsonDeserializer<EventMessageDto> jsonDeserializer =
-                new JacksonJsonDeserializer<>(EventMessageDto.class, jsonMapper);
-        jsonDeserializer.setUseTypeHeaders(false);
-        jsonDeserializer.addTrustedPackages("*");
-
-        ErrorHandlingDeserializer<EventMessageDto> errorDeserializer =
-                new ErrorHandlingDeserializer<>(jsonDeserializer);
+        ErrorHandlingDeserializer<String> errorDeserializer =
+                new ErrorHandlingDeserializer<>(new StringDeserializer());
 
         return new DefaultKafkaConsumerFactory<>(
                 config,
@@ -73,10 +64,10 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, EventMessageDto> kafkaListenerContainerFactory(
-            ConsumerFactory<String, EventMessageDto> consumerFactory) {
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
+            ConsumerFactory<String, String> consumerFactory) {
 
-        ConcurrentKafkaListenerContainerFactory<String, EventMessageDto> factory =
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setConcurrency(3);

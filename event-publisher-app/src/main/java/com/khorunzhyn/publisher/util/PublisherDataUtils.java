@@ -7,13 +7,15 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @UtilityClass
-public class RandomDataUtils {
+public class PublisherDataUtils {
 
     // --- User Action Data ---
     public static final List<String> USER_ACTIONS = List.of(
             "LOGIN", "LOGOUT", "VIEW_PAGE", "CREATE_RESOURCE",
             "UPDATE_RESOURCE", "DELETE_RESOURCE", "DOWNLOAD_FILE"
     );
+
+    public static final String OUTBOX_EVENT = "OUTBOX_EVENT";
 
     public static final List<String> ACTOR_TYPES = List.of("CUSTOMER", "ADMIN", "SUPPORT", "API_CLIENT");
     public static final List<String> USER_ROLES = List.of("USER", "VIEWER", "EDITOR", "ADMIN");

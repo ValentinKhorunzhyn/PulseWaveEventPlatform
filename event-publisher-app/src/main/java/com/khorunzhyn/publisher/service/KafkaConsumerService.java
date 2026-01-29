@@ -19,12 +19,11 @@ import org.springframework.stereotype.Service;
 public class KafkaConsumerService {
 
     private final EventService eventService;
-    private final PublisherIdentityService identityService;
 
     @KafkaListener(
             topics = "${kafka.topics.confirmations:confirmations.topic}",
             groupId = "${spring.kafka.consumer.group-id:publisher-group}",
-            containerFactory = "kafkaListenerContainerFactory"
+            containerFactory = "confirmationContainerFactory"
     )
     @RetryableTopic(
             attempts = "5",

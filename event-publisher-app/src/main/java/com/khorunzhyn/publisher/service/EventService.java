@@ -6,28 +6,22 @@ import com.khorunzhyn.publisher.enums.EventType;
 import com.khorunzhyn.publisher.model.Event;
 import com.khorunzhyn.publisher.repository.EventRepository;
 import jakarta.transaction.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class EventService {
-
-    private static final Logger log = LoggerFactory.getLogger(EventService.class);
 
     private final EventRepository eventRepository;
     private final EventPayloadFactory payloadFactory;
     private final PublisherIdentityService identityService;
-
-    public EventService(EventRepository eventRepository, EventPayloadFactory payloadFactory, PublisherIdentityService identityService) {
-        this.eventRepository = eventRepository;
-        this.payloadFactory = payloadFactory;
-        this.identityService = identityService;
-    }
 
     @Transactional
     public Event generateEvent() {
@@ -40,6 +34,7 @@ public class EventService {
                 .status(EventStatus.CREATED)
                 .publisherId(identityService.getPublisherId())
                 .publisherMetadata(identityService.getMetadata())
+                .createdAt(Instant.now())
                 .build();
 
         Event savedEvent = eventRepository.save(event);
@@ -74,15 +69,6 @@ public class EventService {
                     eventRepository.save(event);
                     log.warn("Event {} marked as failed: {}", eventId, reason);
                 });
-    }
-
-    public List<Event> getPendingEvents(int limit) {
-        return eventRepository.findByStatusAndCreatedAtBefore(
-                        EventStatus.CREATED,
-                        Instant.now().minusSeconds(60))
-                .stream()
-                .limit(limit)
-                .toList();
     }
 
     public List<Event> getRecentEvents(int limit) {

@@ -1,12 +1,17 @@
 package com.khorunzhyn.publisher.service;
 
+import com.khorunzhyn.publisher.dto.EventMessageDto;
+import com.khorunzhyn.publisher.enums.OutboxStatus;
+import com.khorunzhyn.publisher.mapper.EventMapper;
 import com.khorunzhyn.publisher.model.Event;
+import com.khorunzhyn.publisher.model.OutboxEvent;
+import com.khorunzhyn.publisher.util.PublisherDataUtils;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import java.util.concurrent.atomic.AtomicLong;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
@@ -14,30 +19,42 @@ import java.util.concurrent.atomic.AtomicLong;
 public class EventPublisherService {
 
     private final EventService eventService;
-    private final KafkaProducerService kafkaProducerService;
-
-    private final AtomicLong eventsGenerated = new AtomicLong(0);
-    private final AtomicLong eventsSent = new AtomicLong(0);
+    private final OutboxEventService outboxEventService;
+    private final ObjectMapper objectMapper;
 
     @Scheduled(
             fixedDelayString = "${publisher.interval.ms:5000}",
             initialDelayString = "${publisher.initial-delay.ms:10000}"
     )
-    public void generateAndSendEvent() {
+    @Transactional
+    public void generateEvent() {
         try {
             // Generate event
             Event event = eventService.generateEvent();
-            eventsGenerated.incrementAndGet();
-            // send to Kafka
-            kafkaProducerService.sendEvent(event);
-            eventsSent.incrementAndGet();
-
-            log.info("Generated and sent event: {} (Type: {})",
+            log.info("Generated event: {} (Type: {}) saved in publisher db",
                     event.getId(), event.getEventType());
 
+            //save outbox event
+            EventMessageDto eventMessageDto = EventMapper.totEventMessageDto(event);
+            OutboxEvent outbox = buildOutboxEvent(eventMessageDto, event);
+            OutboxEvent outboxEvent = outboxEventService.saveOutboxEvent(outbox);
+            log.info("Outbox event {} saved for export", outboxEvent.getId());
+
         } catch (Exception e) {
-            log.error("Failed to generate or send event: {}", e.getMessage(), e);
+            log.error("Failed to generate or save event: {}", e.getMessage(), e);
         }
     }
 
+    private OutboxEvent buildOutboxEvent(EventMessageDto eventMessageDto, Event event) {
+
+        String payload = objectMapper.writeValueAsString(eventMessageDto);
+
+        return OutboxEvent.builder()
+                .aggregateType(PublisherDataUtils.OUTBOX_EVENT)
+                .aggregateId(event.getId())
+                .type(event.getEventType().name())
+                .payload(payload)
+                .status(OutboxStatus.PENDING)
+                .build();
+    }
 }

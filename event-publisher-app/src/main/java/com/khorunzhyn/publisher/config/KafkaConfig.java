@@ -46,8 +46,10 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, Object> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+    public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
+        KafkaTemplate<String, Object> template = new KafkaTemplate<>(producerFactory);
+        template.setObservationEnabled(true);
+        return template;
     }
 
     //Bean for ConfirmationMessageDto
@@ -81,6 +83,7 @@ public class KafkaConfig {
         factory.setConsumerFactory(confirmationConsumerFactory);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         factory.setConcurrency(3);
+        factory.getContainerProperties().setObservationEnabled(true);
         return factory;
     }
 
@@ -110,6 +113,7 @@ public class KafkaConfig {
         factory.setConsumerFactory(stringConsumerFactory);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE); // Или BATCH
         factory.setConcurrency(1);
+        factory.getContainerProperties().setObservationEnabled(true);
         return factory;
     }
 

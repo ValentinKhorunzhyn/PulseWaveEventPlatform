@@ -9,6 +9,7 @@ import com.khorunzhyn.registar.model.RegisteredEvent;
 import com.khorunzhyn.registar.repository.RegisteredEventRepository;
 import com.khorunzhyn.registar.repository.specification.EventSearchCriteria;
 import com.khorunzhyn.registar.repository.specification.RegisteredEventSpecifications;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -28,8 +29,8 @@ import java.util.UUID;
 public class EventRegistrationService {
 
     private final RegisteredEventRepository eventRepository;
-    private final KafkaProducerService kafkaProducerService;
     private final EventMapper eventMapper;
+    private final MeterRegistry meterRegistry;
 
     @Transactional
     public RegisteredEvent registerEvent(EventMessageDto message) {
@@ -57,6 +58,8 @@ public class EventRegistrationService {
             eventRepository.save(savedEvent);
             throw e;
         }
+
+        meterRegistry.counter("events.registered", "publisher", message.publisherId()).increment();
 
         return savedEvent;
     }

@@ -90,15 +90,24 @@ management:
   tracing:
     sampling:
       probability: 1.0
-  zipkin:
+    propagation:
+      type: w3c
+  otlp:
     tracing:
-      endpoint: "http://zipkin:9411/api/v2/spans"
+      endpoint: http://jaeger:4318/v1/traces
+#      transport: http
 
 logging:
   level:
     com.khorunzhyn.publisher: DEBUG
     org.springframework.kafka: INFO
     org.hibernate.SQL: WARN
+    io.opentelemetry: DEBUG
+    io.micrometer.tracing: DEBUG
+    org.springframework.boot.actuate.autoconfigure.tracing: DEBUG
+  pattern:
+    #    correlation: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
 springdoc:
   swagger-ui:

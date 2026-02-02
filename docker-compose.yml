@@ -274,11 +274,14 @@ services:
         condition: service_healthy
 
     # --- TRACING ---
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: zipkin
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     ports:
-      - "9411:9411"
+      - "16686:16686" # UI
+      - "4318:4318"   # OTLP HTTP
     networks:
       - app-network
 

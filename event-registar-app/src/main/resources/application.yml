@@ -104,6 +104,8 @@ logging:
     org.springframework.kafka: ${LOGGING_LEVEL_KAFKA:WARN}
     org.hibernate.SQL: ${LOGGING_LEVEL_HIBERNATE_SQL:WARN}
     org.hibernate.type.descriptor.sql: ${LOGGING_LEVEL_HIBERNATE_TYPE:WARN}
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}] "
 
 springdoc:
   swagger-ui:

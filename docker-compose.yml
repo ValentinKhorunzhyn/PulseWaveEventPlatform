@@ -77,7 +77,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 30s
     restart: unless-stopped
 
   publisher-2:
@@ -113,7 +113,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 30s
     restart: unless-stopped
 
   publisher-3:
@@ -149,7 +149,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 30s
     restart: unless-stopped
 
   registar:
@@ -181,7 +181,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 30s
     restart: unless-stopped
 
   zookeeper:
@@ -272,6 +272,85 @@ services:
         condition: service_healthy
       publisher-3:
         condition: service_healthy
+
+    # --- TRACING ---
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # UI
+      - "4318:4318"   # OTLP HTTP
+    networks:
+      - app-network
+
+  # --- METRICS ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
+  # --- LOGGING (ELK) ---
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks:
+      - app-network
+    healthcheck: # Wait until ES up
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.1
+    container_name: logstash
+    volumes:
+      - ./observability/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5000:5000/tcp"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - app-network
 
 volumes:
   publisher-data:

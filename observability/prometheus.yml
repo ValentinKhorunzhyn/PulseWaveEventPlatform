@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'publisher-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['publisher-1:8090', 'publisher-2:8090', 'publisher-3:8090']
+
+  - job_name: 'registar-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['registar:8091']

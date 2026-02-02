@@ -83,6 +83,12 @@ management:
     export:
       prometheus:
         enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: "http://zipkin:9411/api/v2/spans"
 
 registration:
   processing:
@@ -99,8 +105,7 @@ logging:
     org.hibernate.SQL: ${LOGGING_LEVEL_HIBERNATE_SQL:WARN}
     org.hibernate.type.descriptor.sql: ${LOGGING_LEVEL_HIBERNATE_TYPE:WARN}
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}] "
 
 springdoc:
   swagger-ui:

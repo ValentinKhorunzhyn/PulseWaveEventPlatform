@@ -87,15 +87,27 @@ management:
     export:
       prometheus:
         enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  otlp:
+    tracing:
+      endpoint: http://jaeger:4318/v1/traces
+#      transport: http
 
 logging:
   level:
     com.khorunzhyn.publisher: DEBUG
     org.springframework.kafka: INFO
     org.hibernate.SQL: WARN
+    io.opentelemetry: DEBUG
+    io.micrometer.tracing: DEBUG
+    org.springframework.boot.actuate.autoconfigure.tracing: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    #    correlation: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
 springdoc:
   swagger-ui:

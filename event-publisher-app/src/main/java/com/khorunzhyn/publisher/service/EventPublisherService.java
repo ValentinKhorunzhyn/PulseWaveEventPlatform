@@ -6,6 +6,7 @@ import com.khorunzhyn.publisher.mapper.EventMapper;
 import com.khorunzhyn.publisher.model.Event;
 import com.khorunzhyn.publisher.model.OutboxEvent;
 import com.khorunzhyn.publisher.util.PublisherDataUtils;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ public class EventPublisherService {
     private final EventService eventService;
     private final OutboxEventService outboxEventService;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     @Scheduled(
             fixedDelayString = "${publisher.interval.ms:5000}",
@@ -39,6 +41,9 @@ public class EventPublisherService {
             OutboxEvent outbox = buildOutboxEvent(eventMessageDto, event);
             OutboxEvent outboxEvent = outboxEventService.saveOutboxEvent(outbox);
             log.info("Outbox event {} saved for export", outboxEvent.getId());
+
+            //metrics
+            meterRegistry.counter("events.generated", "type", event.getEventType().name()).increment();
 
         } catch (Exception e) {
             log.error("Failed to generate or save event: {}", e.getMessage(), e);

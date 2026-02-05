@@ -23,7 +23,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    command: ["postgres", "-c", "wal_level=logical"]
+    command: [ "postgres", "-c", "wal_level=logical" ]
 
   registar-db:
     image: postgres:16
@@ -56,12 +56,15 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      logstash:
+        condition: service_healthy
     environment:
       # Database
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
+      SPRING_FLYWAY_ENABLED: true
       # Kafka
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
       # Publisher instance
@@ -77,7 +80,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 20s
     restart: unless-stopped
 
   publisher-2:
@@ -92,12 +95,17 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      logstash:
+        condition: service_healthy
+      publisher-1:
+        condition: service_healthy
     environment:
       # Database
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
+      SPRING_FLYWAY_ENABLED: false
       # Kafka
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
       # Publisher instance
@@ -113,7 +121,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 20s
     restart: unless-stopped
 
   publisher-3:
@@ -128,12 +136,17 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      logstash:
+        condition: service_healthy
+      publisher-1:
+        condition: service_healthy
     environment:
       # Database
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
+      SPRING_FLYWAY_ENABLED: false
       # Kafka
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
       # Publisher instance
@@ -149,7 +162,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 20s
     restart: unless-stopped
 
   registar:
@@ -163,6 +176,8 @@ services:
       registar-db:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      logstash:
         condition: service_healthy
     environment:
       # Database
@@ -231,6 +246,9 @@ services:
       VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
     depends_on:
       kafka:
         condition: service_healthy
@@ -338,6 +356,11 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9600/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.1

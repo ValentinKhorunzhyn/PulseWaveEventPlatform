@@ -1,34 +1,42 @@
 {
   "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
   "tasks.max": "1",
-
   "database.hostname": "publisher-db",
   "database.port": "5432",
   "database.user": "user",
   "database.password": "password",
   "database.dbname": "publisher_db",
-
   "topic.prefix": "pulsewave",
   "table.include.list": "public.outbox_events",
   "plugin.name": "pgoutput",
   "slot.name": "outbox_slot",
-  "publication.autocreate.mode": "filtered",
+  "publication.autocreate.mode": "all_tables",
+  "snapshot.mode": "initial",
+  "heartbeat.interval.ms": "5000",
 
   "transforms": "unwrap,extract,reroute",
 
   "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
-  "transforms.unwrap.drop.tombstones": "false",
-  "transforms.unwrap.delete.handling.mode": "rewrite",
+  "transforms.unwrap.predicate": "isOutboxTopic",
 
   "transforms.extract.type": "org.apache.kafka.connect.transforms.ExtractField$Value",
   "transforms.extract.field": "payload",
+  "transforms.extract.predicate": "isOutboxTopic",
 
   "transforms.reroute.type": "org.apache.kafka.connect.transforms.RegexRouter",
-  "transforms.reroute.regex": ".*",
+  "transforms.reroute.regex": "pulsewave.public.outbox_events",
   "transforms.reroute.replacement": "events.topic",
+
+  "predicates": "isOutboxTopic",
+  "predicates.isOutboxTopic.type": "org.apache.kafka.connect.transforms.predicates.TopicNameMatches",
+  "predicates.isOutboxTopic.pattern": "pulsewave.public.outbox_events",
 
   "key.converter": "org.apache.kafka.connect.json.JsonConverter",
   "value.converter": "org.apache.kafka.connect.json.JsonConverter",
   "key.converter.schemas.enable": "false",
-  "value.converter.schemas.enable": "false"
+  "value.converter.schemas.enable": "false",
+
+  "errors.tolerance": "all",
+  "errors.log.enable": "true",
+  "errors.log.include.messages": "true"
 }

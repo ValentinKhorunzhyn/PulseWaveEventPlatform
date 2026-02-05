@@ -34,7 +34,7 @@ public class ConfirmationTask {
             return;
         }
 
-        log.debug("Found {} events pending confirmation", pendingEvents.size());
+        log.info("Found {} events pending confirmation", pendingEvents.size());
 
         for (RegisteredEvent event : pendingEvents) {
             try {

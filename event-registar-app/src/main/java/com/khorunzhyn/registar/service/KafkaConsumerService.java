@@ -39,8 +39,10 @@ public class KafkaConsumerService {
             @Header(KafkaHeaders.RECEIVED_TIMESTAMP) long timestamp,
             Acknowledgment ack) {
 
-        log.info("Received event from Kafka - Key: {}, Partition: {}, Timestamp: {}",
+        log.info("Received Avro event from Kafka - Key: {}, Partition: {}, Timestamp: {}",
                 key, partition, timestamp);
+
+        // Теперь message - это сразу твой готовый JSON (распакованный из Avro!)
         EventMessageDto messageDto = parseMessage(message);
         eventRegistrationService.registerEvent(messageDto);
 
@@ -49,24 +51,30 @@ public class KafkaConsumerService {
     }
 
     @DltHandler
-    public void handleDlt(String message,
+    public void handleDlt(@Payload String message,
                           @Header(KafkaHeaders.EXCEPTION_MESSAGE) String errorMessage) {
+        log.error("Event failed after all retries. Moving to DLT. Error: {}", errorMessage);
+
         log.error("Event failed after all retries. Moving to DLT. Message: {}, Error: {}", message, errorMessage);
         EventMessageDto messageDto = parseMessage(message);
         saveFailedEvent(messageDto, new RuntimeException(errorMessage));
     }
 
     private EventMessageDto parseMessage(String message) {
-        JsonNode node = objectMapper.readTree(message);
-        if (node.isString()) {
-            node = objectMapper.readTree(node.asString());
+        try {
+            JsonNode node = objectMapper.readTree(message);
+            // Fix for double escaping
+            if (node.isString()) {
+                node = objectMapper.readTree(node.asString());
+            }
+            return objectMapper.treeToValue(node, EventMessageDto.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse JSON payload to DTO", e);
         }
-        return objectMapper.treeToValue(node, EventMessageDto.class);
     }
 
     private void saveFailedEvent(EventMessageDto message, Exception exception) {
         try {
-
             log.warn("Saving failed event details to database: {}", message.eventId());
             //todo business logic for saving failed events
         } catch (Exception e) {
@@ -74,5 +82,4 @@ public class KafkaConsumerService {
                     message.eventId(), e.getMessage(), e);
         }
     }
-
 }

@@ -1,6 +1,6 @@
 package com.khorunzhyn.publisher.service;
 
-import com.khorunzhyn.publisher.dto.ConfirmationMessageDto;
+import com.khorunzhyn.registar.avro.ConfirmationEventAvro;
 import com.khorunzhyn.publisher.enums.EventStatus;
 import com.khorunzhyn.publisher.enums.EventType;
 import com.khorunzhyn.publisher.model.Event;
@@ -48,13 +48,13 @@ public class EventService {
     }
 
     @Transactional
-    public void confirmEvent(ConfirmationMessageDto confirmation) {
-        String eventId = confirmation.eventId();
+    public void confirmEvent(ConfirmationEventAvro confirmation) {
+        String eventId = confirmation.getEventId();
         eventRepository.findById(eventId)
                 .ifPresentOrElse(
                         event -> {
                             event.setStatus(EventStatus.CONFIRMED);
-                            event.setConfirmedAt(confirmation.confirmedAt());
+                            event.setConfirmedAt(confirmation.getConfirmedAt());
                             eventRepository.save(event);
                             log.info("Event {} confirmed by registration service", eventId);
                         },

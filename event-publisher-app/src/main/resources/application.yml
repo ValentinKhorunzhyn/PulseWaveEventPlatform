@@ -36,6 +36,7 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    schema-registry-url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:publisher-group}
       auto-offset-reset: earliest

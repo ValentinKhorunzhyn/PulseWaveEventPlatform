@@ -1,0 +1,17 @@
+{
+  "namespace": "com.khorunzhyn.registar.avro",
+  "type": "record",
+  "name": "ConfirmationEventAvro",
+  "fields": [
+    { "name": "eventId", "type": "string" },
+    { "name": "publisherId", "type": "string" },
+    { "name": "registrationId", "type": "string" },
+    {
+      "name": "confirmedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    }
+  ]
+}

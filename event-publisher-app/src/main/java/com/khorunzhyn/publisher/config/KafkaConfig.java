@@ -1,9 +1,12 @@
 package com.khorunzhyn.publisher.config;
 
-import com.khorunzhyn.publisher.dto.ConfirmationMessageDto;
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,9 +18,6 @@ import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
-import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
-import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,15 +32,26 @@ public class KafkaConfig {
     @Value("${spring.kafka.consumer.group-id:publisher-group}")
     private String groupId;
 
+    @Value("${spring.kafka.schema-registry-url:http://localhost:8081}")
+    private String schemaRegistryUrl;
+
+    //
+    // PRODUCER (Avro)
+    //
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
         config.put(ProducerConfig.RETRIES_CONFIG, 3);
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        // serialization to Avro
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+
+        // access to schema registry
+        config.put(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
 
         return new DefaultKafkaProducerFactory<>(config);
     }
@@ -52,33 +63,35 @@ public class KafkaConfig {
         return template;
     }
 
-    //Bean for ConfirmationMessageDto
-
+    //
+    // CONSUMER 1: for Avro confirmations
+    //
     @Bean
-    public ConsumerFactory<String, ConfirmationMessageDto> confirmationConsumerFactory(JsonMapper jsonMapper) {
+    public ConsumerFactory<String, Object> confirmationConsumerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
-        JacksonJsonDeserializer<ConfirmationMessageDto> jsonDeserializer =
-                new JacksonJsonDeserializer<>(ConfirmationMessageDto.class, jsonMapper);
-        jsonDeserializer.setUseTypeHeaders(false);
-        jsonDeserializer.addTrustedPackages("*");
+        // configure deserialization
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, KafkaAvroDeserializer.class.getName());
 
-        return new DefaultKafkaConsumerFactory<>(
-                config,
-                new StringDeserializer(),
-                new ErrorHandlingDeserializer<>(jsonDeserializer)
-        );
+        // Avro settings
+        config.put(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+        // Говорим отдавать конкретный сгенерированный класс, а не GenericRecord
+        config.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true);
+
+        return new DefaultKafkaConsumerFactory<>(config);
     }
 
     @Bean("confirmationContainerFactory")
-    public ConcurrentKafkaListenerContainerFactory<String, ConfirmationMessageDto> confirmationContainerFactory(
-            ConsumerFactory<String, ConfirmationMessageDto> confirmationConsumerFactory) {
+    public ConcurrentKafkaListenerContainerFactory<String, Object> confirmationContainerFactory(
+            ConsumerFactory<String, Object> confirmationConsumerFactory) {
 
-        ConcurrentKafkaListenerContainerFactory<String, ConfirmationMessageDto> factory =
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(confirmationConsumerFactory);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
@@ -87,10 +100,11 @@ public class KafkaConfig {
         return factory;
     }
 
-    //Bean for String
-
+    //
+    // CONSUMER 2: for Outbox Ack (Key - String, Value - ignore)
+    //
     @Bean
-    public ConsumerFactory<String, String> stringConsumerFactory() {
+    public ConsumerFactory<String, byte[]> ackConsumerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
@@ -100,23 +114,27 @@ public class KafkaConfig {
         return new DefaultKafkaConsumerFactory<>(
                 config,
                 new StringDeserializer(),
-                new ErrorHandlingDeserializer<>(new StringDeserializer()) // String десериализатор
+                // Читаем сырые байты, так как парсить Avro для Ack нам не нужно
+                new ByteArrayDeserializer()
         );
     }
 
-    @Bean("stringContainerFactory")
-    public ConcurrentKafkaListenerContainerFactory<String, String> stringContainerFactory(
-            ConsumerFactory<String, String> stringConsumerFactory) {
+    @Bean("ackContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, byte[]> ackContainerFactory(
+            ConsumerFactory<String, byte[]> ackConsumerFactory) {
 
-        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+        ConcurrentKafkaListenerContainerFactory<String, byte[]> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(stringConsumerFactory);
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE); // Или BATCH
+        factory.setConsumerFactory(ackConsumerFactory);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         factory.setConcurrency(1);
         factory.getContainerProperties().setObservationEnabled(true);
         return factory;
     }
 
+    //
+    // TOPICS
+    //
     @Bean
     public NewTopic eventsTopic() {
         return TopicBuilder.name("events.topic")

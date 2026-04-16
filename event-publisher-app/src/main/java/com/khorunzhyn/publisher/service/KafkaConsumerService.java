@@ -1,6 +1,6 @@
 package com.khorunzhyn.publisher.service;
 
-import com.khorunzhyn.publisher.dto.ConfirmationMessageDto;
+import com.khorunzhyn.registar.avro.ConfirmationEventAvro;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.BackOff;
@@ -30,28 +30,28 @@ public class KafkaConsumerService {
             backOff = @BackOff(delay = 1000, multiplier = 2.0)
     )
     public void consumeConfirmation(
-            @Payload ConfirmationMessageDto confirmation,
+            @Payload ConfirmationEventAvro confirmation,
             @Header(KafkaHeaders.RECEIVED_KEY) String key,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.RECEIVED_TIMESTAMP) long timestamp,
             Acknowledgment ack) {
 
         log.info("Received confirmation for event {} from Kafka - Key: {}, Partition: {}, Timestamp: {}",
-                confirmation.eventId(), key, partition, timestamp);
+                confirmation.getEventId(), key, partition, timestamp);
 
         eventService.confirmEvent(confirmation);
         ack.acknowledge();
 
         log.debug("Successfully processed confirmation for event {}",
-                confirmation.eventId());
+                confirmation.getEventId());
     }
 
     @DltHandler
-    public void handleDlt(ConfirmationMessageDto message,
+    public void handleDlt(ConfirmationEventAvro message,
                           @Header(KafkaHeaders.EXCEPTION_MESSAGE) String errorMessage) {
         log.error("Failed to process confirmation for event {}: {}",
                 message, errorMessage);
-        eventService.markEventAsFailed(message.eventId(), errorMessage);
+        eventService.markEventAsFailed(message.getEventId(), errorMessage);
     }
 }
 

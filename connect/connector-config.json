@@ -9,32 +9,19 @@
   "topic.prefix": "pulsewave",
   "table.include.list": "public.outbox_events",
   "plugin.name": "pgoutput",
-  "slot.name": "outbox_slot",
+  "slot.name": "outbox_slot_avro",
   "publication.autocreate.mode": "all_tables",
   "snapshot.mode": "initial",
-  "heartbeat.interval.ms": "5000",
 
-  "transforms": "unwrap,extract,reroute",
+  "transforms": "outbox",
+  "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+  "transforms.outbox.table.field.event.id": "id",
+  "transforms.outbox.table.field.event.key": "aggregate_id",
+  "transforms.outbox.table.field.event.type": "type",
+  "transforms.outbox.table.field.event.payload": "payload",
 
-  "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
-  "transforms.unwrap.predicate": "isOutboxTopic",
-
-  "transforms.extract.type": "org.apache.kafka.connect.transforms.ExtractField$Value",
-  "transforms.extract.field": "payload",
-  "transforms.extract.predicate": "isOutboxTopic",
-
-  "transforms.reroute.type": "org.apache.kafka.connect.transforms.RegexRouter",
-  "transforms.reroute.regex": "pulsewave.public.outbox_events",
-  "transforms.reroute.replacement": "events.topic",
-
-  "predicates": "isOutboxTopic",
-  "predicates.isOutboxTopic.type": "org.apache.kafka.connect.transforms.predicates.TopicNameMatches",
-  "predicates.isOutboxTopic.pattern": "pulsewave.public.outbox_events",
-
-  "key.converter": "org.apache.kafka.connect.json.JsonConverter",
-  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-  "key.converter.schemas.enable": "false",
-  "value.converter.schemas.enable": "false",
+  "transforms.outbox.route.by.field": "aggregate_type",
+  "transforms.outbox.route.topic.replacement": "events.topic",
 
   "errors.tolerance": "all",
   "errors.log.enable": "true",

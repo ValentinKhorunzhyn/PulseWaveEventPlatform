@@ -37,6 +37,7 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    schema-registry-url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:registration-group}
       auto-offset-reset: earliest
@@ -86,9 +87,6 @@ management:
   tracing:
     sampling:
       probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: "http://zipkin:9411/api/v2/spans"
 
 registration:
   processing:

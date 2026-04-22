@@ -3,9 +3,11 @@ spring:
     name: registration-service
 
   security:
-    user:
-      name: user
-      password: password
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080/realms/pulsewave}
+          jwk-set-uri: http://keycloak:8080/realms/pulsewave/protocol/openid-connect/certs
 
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/registar_db}

@@ -1,0 +1,44 @@
+{
+  "realm": "pulsewave",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Administrator Role" },
+      { "name": "user", "description": "Regular User Role" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "pulsewave-client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "firstName": "Super",
+      "lastName": "Admin",
+      "email": "admin@pulsewave.com",
+      "credentials": [
+        { "type": "password", "value": "admin", "temporary": false }
+      ],
+      "realmRoles": [ "admin", "user" ]
+    },
+    {
+      "username": "user",
+      "enabled": true,
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "user@pulsewave.com",
+      "credentials": [
+        { "type": "password", "value": "user", "temporary": false }
+      ],
+      "realmRoles": [ "user" ]
+    }
+  ]
+}

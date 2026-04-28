@@ -11,6 +11,7 @@
     <modules>
         <module>event-publisher-app</module>
         <module>event-registar-app</module>
+        <module>config-server-app</module>
     </modules>
 
     <properties>
@@ -32,6 +33,14 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-config-server</artifactId>
+            <version>5.0.1</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>

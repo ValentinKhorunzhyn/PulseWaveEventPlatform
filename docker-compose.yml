@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   app-network:
     driver: bridge
@@ -60,6 +58,8 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
+      config-server:
+        condition: service_healthy
     environment:
       # Database
       SPRING_PROFILES_ACTIVE: docker
@@ -75,6 +75,7 @@ services:
       PUBLISHER_ID: 1
       PUBLISHER_NAME: "Event Publisher"
       PUBLISHER_INTERVAL_MS: "5000"
+      CONFIG_SERVER_URL: http://config-server:8888
       # Java
       JAVA_OPTS: "-Xmx1024m -Xms256m"
     ports:
@@ -105,6 +106,8 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
+      config-server:
+        condition: service_healthy
     environment:
       # Database
       SPRING_PROFILES_ACTIVE: docker
@@ -120,6 +123,7 @@ services:
       PUBLISHER_ID: 2
       PUBLISHER_NAME: "Event Publisher"
       PUBLISHER_INTERVAL_MS: "5000"
+      CONFIG_SERVER_URL: http://config-server:8888
       # Java
       JAVA_OPTS: "-Xmx512m -Xms256m"
     ports:
@@ -150,6 +154,8 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
+      config-server:
+        condition: service_healthy
     environment:
       # Database
       SPRING_PROFILES_ACTIVE: docker
@@ -165,6 +171,7 @@ services:
       PUBLISHER_ID: 3
       PUBLISHER_NAME: "Event Publisher"
       PUBLISHER_INTERVAL_MS: "5000"
+      CONFIG_SERVER_URL: http://config-server:8888
       # Java
       JAVA_OPTS: "-Xmx512m -Xms256m"
     ports:
@@ -193,6 +200,8 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
+      config-server:
+        condition: service_healthy
     environment:
       # Database
       SPRING_PROFILES_ACTIVE: docker
@@ -203,6 +212,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
       #Schema registry
       SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONFIG_SERVER_URL: http://config-server:8888
       # Java
       JAVA_OPTS: "-Xmx512m -Xms256m"
     ports:
@@ -214,6 +224,23 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+
+  config-server:
+    build:
+      context: .
+      dockerfile: config-server-app/Dockerfile
+    container_name: config-server
+    networks:
+      - app-network
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./config-repo:/config-repo:ro
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8888/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.7.8

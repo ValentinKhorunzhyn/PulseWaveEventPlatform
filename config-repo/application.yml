@@ -1,0 +1,66 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080/realms/pulsewave}
+          jwk-set-uri: http://keycloak:8080/realms/pulsewave/protocol/openid-connect/certs
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    schema-registry-url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      fetch-max-wait: 500
+      fetch-min-size: 1
+      max-poll-records: 100
+
+server:
+  tomcat:
+    max-connections: 10000
+    threads:
+      max: 200
+      min-spare: 10
+
+kafka:
+  topics:
+    events: ${KAFKA_EVENTS_TOPIC:events.topic}
+    confirmations: ${KAFKA_CONFIRMATIONS_TOPIC:confirmations.topic}
+    dlq: ${KAFKA_DLQ_TOPIC:dead-letter.topic}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  otlp:
+    tracing:
+      endpoint: http://jaeger:4318/v1/traces
+
+springdoc:
+  swagger-ui:
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

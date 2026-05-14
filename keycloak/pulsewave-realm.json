@@ -11,7 +11,9 @@
     {
       "clientId": "pulsewave-client",
       "enabled": true,
-      "publicClient": true,
+      "publicClient": false,
+      "secret": "my-super-secret-m2m-key",
+      "serviceAccountsEnabled": true,
       "directAccessGrantsEnabled": true,
       "redirectUris": ["*"],
       "webOrigins": ["*"]

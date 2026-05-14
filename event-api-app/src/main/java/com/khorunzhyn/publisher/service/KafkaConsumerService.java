@@ -1,6 +1,6 @@
 package com.khorunzhyn.publisher.service;
 
-import com.khorunzhyn.registar.avro.ConfirmationEventAvro;
+import com.khorunzhyn.common.avro.ConfirmationEventAvro;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.BackOff;

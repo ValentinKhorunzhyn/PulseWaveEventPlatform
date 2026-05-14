@@ -1,5 +1,5 @@
 {
-  "namespace": "com.khorunzhyn.registar.avro",
+  "namespace": "com.khorunzhyn.common.avro",
   "type": "record",
   "name": "ConfirmationEventAvro",
   "fields": [

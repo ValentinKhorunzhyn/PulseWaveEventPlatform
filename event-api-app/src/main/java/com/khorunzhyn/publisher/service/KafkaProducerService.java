@@ -16,11 +16,9 @@ public class KafkaProducerService {
     private static final Logger log = LoggerFactory.getLogger(KafkaProducerService.class);
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final PublisherIdentityService identityService;
 
-    public KafkaProducerService(KafkaTemplate<String, Object> kafkaTemplate, PublisherIdentityService identityService) {
+    public KafkaProducerService(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
-        this.identityService = identityService;
     }
 
     private static final String EVENTS_TOPIC = "events.topic";
@@ -28,8 +26,8 @@ public class KafkaProducerService {
     public void sendEvent(Event event) {
         EventMessageDto message = new EventMessageDto(
                 event.getId(),
-                identityService.getPublisherId(),
-                identityService.getMetadata(),
+                event.getPublisherId(),
+                event.getPublisherMetadata(),
                 event.getEventType(),
                 event.getPayload(),
                 event.getCreatedAt()

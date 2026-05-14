@@ -1,6 +1,6 @@
 package com.khorunzhyn.registar.service;
 
-import com.khorunzhyn.registar.avro.ConfirmationEventAvro;
+import com.khorunzhyn.common.avro.ConfirmationEventAvro;
 import com.khorunzhyn.registar.model.RegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

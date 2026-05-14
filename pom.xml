@@ -11,6 +11,7 @@
     <modules>
         <module>event-publisher-app</module>
         <module>event-registar-app</module>
+        <module>event-api-app</module>
     </modules>
 
     <properties>

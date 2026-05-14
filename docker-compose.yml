@@ -52,26 +52,9 @@ services:
     networks:
       - app-network
     depends_on:
-      publisher-db:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
       logstash:
         condition: service_healthy
-      schema-registry:
-        condition: service_healthy
     environment:
-      # Database
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-      SPRING_FLYWAY_ENABLED: true
-      # Kafka
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
-      #Schema registry
-      SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      # Publisher instance
       PUBLISHER_ID: 1
       PUBLISHER_NAME: "Event Publisher"
       PUBLISHER_INTERVAL_MS: "5000"
@@ -95,27 +78,9 @@ services:
     networks:
       - app-network
     depends_on:
-      publisher-db:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
       logstash:
         condition: service_healthy
-      publisher-1:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
     environment:
-      # Database
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-      SPRING_FLYWAY_ENABLED: false
-      # Kafka
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
-      #Schema registry
-      SCHEMA_REGISTRY_URL: http://schema-registry:8081
       # Publisher instance
       PUBLISHER_ID: 2
       PUBLISHER_NAME: "Event Publisher"
@@ -140,13 +105,38 @@ services:
     networks:
       - app-network
     depends_on:
+      logstash:
+        condition: service_healthy
+    environment:
+      # Publisher instance
+      PUBLISHER_ID: 3
+      PUBLISHER_NAME: "Event Publisher"
+      PUBLISHER_INTERVAL_MS: "5000"
+      # Java
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    ports:
+      - "8093:8090"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  event-api:
+    build:
+      context: .
+      dockerfile: event-api-app/Dockerfile
+    container_name: event-api-app
+    networks:
+      - app-network
+    depends_on:
       publisher-db:
         condition: service_healthy
       kafka:
         condition: service_healthy
       logstash:
-        condition: service_healthy
-      publisher-1:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
@@ -156,19 +146,15 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://publisher-db:5432/publisher_db
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
-      SPRING_FLYWAY_ENABLED: false
+      SPRING_FLYWAY_ENABLED: true
       # Kafka
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
       #Schema registry
       SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      # Publisher instance
-      PUBLISHER_ID: 3
-      PUBLISHER_NAME: "Event Publisher"
-      PUBLISHER_INTERVAL_MS: "5000"
       # Java
-      JAVA_OPTS: "-Xmx512m -Xms256m"
+      JAVA_OPTS: "-Xmx1024m -Xms256m"
     ports:
-      - "8093:8090"
+      - "8095:8090"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
       interval: 30s
@@ -373,10 +359,10 @@ services:
     depends_on:
       publisher-1:
         condition: service_healthy
-      publisher-2:
-        condition: service_healthy
-      publisher-3:
-        condition: service_healthy
+#      publisher-2:
+#        condition: service_healthy
+#      publisher-3:
+#        condition: service_healthy
 
     # --- TRACING ---
   jaeger:

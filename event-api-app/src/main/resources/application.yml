@@ -4,18 +4,10 @@ spring:
 
   security:
     oauth2:
-      client:
-        registration:
-          # Придумываем имя для нашего M2M подключения
-          keycloak-m2m:
-            provider: keycloak
-            client-id: pulsewave-client
-            client-secret: my-super-secret-m2m-key
-            authorization-grant-type: client_credentials
-        provider:
-          keycloak:
-            # Стучимся за токеном по внутренней сети Докера
-            token-uri: http://keycloak:8080/realms/pulsewave/protocol/openid-connect/token
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080/realms/pulsewave}
+          jwk-set-uri: http://keycloak:8080/realms/pulsewave/protocol/openid-connect/certs
 
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/publisher_db}

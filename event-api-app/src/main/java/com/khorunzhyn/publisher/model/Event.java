@@ -1,11 +1,16 @@
 package com.khorunzhyn.publisher.model;
 
 
-import com.khorunzhyn.publisher.dto.EventDto;
 import com.khorunzhyn.publisher.enums.EventStatus;
 import com.khorunzhyn.publisher.enums.EventType;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
@@ -14,19 +19,40 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Entity
+@Table(name = "table_events")
+@EntityListeners(AuditingEntityListener.class)
 public class Event {
 
+    @Id
+    @UuidGenerator
     private String id;
+
+    @Enumerated(EnumType.STRING)
     @NotNull(message = "Event type is required")
     private EventType eventType;
+
+    @Column(columnDefinition = "TEXT")
     private String payload;
+
+    @Enumerated(EnumType.STRING)
     @NotNull(message = "Event status can't be empty")
     private EventStatus status;
+
     private String publisherId;
+
+    @Column(columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private PublisherMetadata publisherMetadata; // JSON with metadata
+
     private Instant createdAt;
+
     private Instant confirmedAt;
+
+    @UpdateTimestamp
     private Instant updatedAt;
+
+    @Version
     private Long version;
 
     @Override
@@ -43,21 +69,6 @@ public class Event {
                 ", updatedAt=" + updatedAt +
                 ", version=" + version +
                 '}';
-    }
-
-    public EventDto toDto() {
-        return EventDto.builder()
-                .id(this.id)
-                .eventType(this.eventType != null ? this.eventType.name() : null)
-                .payload(this.payload)
-                .status(this.status != null ? this.status.name() : null)
-                .publisherId(this.publisherId)
-                .publisherMetadata(this.publisherMetadata)
-                .createdAt(this.createdAt)
-                .confirmedAt(this.confirmedAt)
-                .updatedAt(this.updatedAt)
-                .version(this.version)
-                .build();
     }
 
 }

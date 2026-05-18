@@ -19,7 +19,8 @@
 
 🧩 Обзор  
 1. Бэкенд система, позволяющая пользователям управлять данными событий с полной поддержкой CRUD-функций.  
-2. 3 сервиса Publisher генерируют случайные события (USER_ACTION, SYSTEM_ALERT, BUSINESS_EVENT, AUDIT_LOG),
+2. 3 сервиса Publisher генерируют случайные события (USER_ACTION, SYSTEM_ALERT, BUSINESS_EVENT, AUDIT_LOG) и отправляют
+их в сервис event-api через балансировщик Spring Cloud Api Gateway, где event-api
 сохраняют данные события в 
 общую базу данных в 2 разные таблицы (table_events and table_outbox_events) в рамках одной транзакции
 3. Сервис Kafka-Connect (Debezium) читает данные WAL журнала базы данных и все новые зарегистрированные ивенты отправляет

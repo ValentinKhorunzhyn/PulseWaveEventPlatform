@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 // Пока балансировщика нет, обращаемся к event-api по имени сервиса в Докере
 @FeignClient(
         name = "event-api-client",
-        url = "${EVENT_API_URL:http://event-api:8090}",
+        url = "${EVENT_API_URL:http://api-gateway:8085}",
         configuration = FeignClientConfig.class
 )
 public interface EventApiClient {
 
-    @PostMapping("/api/v1/event")
+    @PostMapping("/event-api/api/v1/events")
     void sendEvent(@RequestBody EventDto eventDto);
 }
